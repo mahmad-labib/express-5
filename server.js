@@ -1,6 +1,5 @@
 const express = require('express')
 global.createError = require('http-errors')
-const multer = require('multer');
 const {
   conf
 } = require('./conf/default')
@@ -20,32 +19,6 @@ global.app.use(bodyParser.urlencoded({
   extended: true
 }));
 global.app.use(bodyParser.json());
-
-//file upload
-var Storage = multer.diskStorage({
-  destination: function (req, file, callback) {
-    callback(null, 'images')
-  },
-  filename: function (req, file, callback) {
-    callback(null, file.orignalname);
-  }
-});
-var upload = multer({
-storage: Storage 
-}).array('image', 3);
-//route
-app.post('/', (req, res) => {});
-
-app.post('/upload', (req, res) => {
-  console.log(req.file);
-  upload(req, res , err => {
-      if (err) {
-          console.log(err);
-          return res.send('somthing went wrong');
-      }
-      return res.send('file uploaded successfully');
-  });
-});
 //middleware
 
 
