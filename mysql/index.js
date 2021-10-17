@@ -7,7 +7,9 @@ const pArticleModel = require('./models/pending-articles');
 const roleModel = require('./models/role-model');
 const sectionModel = require('./models/section-model');
 const pImagesModel = require('./models/pending-images');
-const {conf} = require('../conf/default');
+const {
+    conf
+} = require('../conf/default');
 
 
 // Option 1: Passing a connection URI
@@ -53,9 +55,6 @@ const users_pending_articles = sequelize.define('users_pending_articles')
 // Articles_Sections
 const articles_sections = sequelize.define('articles_sections')
 
-// Articles_Images
-const articles_images = sequelize.define('articles_images')
-
 // Pending_Articles_Images
 const p_articles_images = sequelize.define('p_articles_images')
 
@@ -63,64 +62,96 @@ const p_articles_images = sequelize.define('p_articles_images')
 
 // Users_Roles Relation
 User.belongsToMany(Role, {
+    hooks: true,
+    onDelete: 'cascade',
     through: users_roles,
 });
 Role.belongsToMany(User, {
+    hooks: true,
+    onDelete: 'cascade',
     through: users_roles,
 });
 
 // Users_Sections Relation
 User.belongsToMany(Section, {
+    hooks: true,
+    onDelete: 'cascade',
     through: users_sections
 })
 Section.belongsToMany(User, {
+    hooks: true,
+    onDelete: 'cascade',
     through: users_sections
 })
 
 // Users_Pending_Article Relation
 User.belongsToMany(pArticle, {
+
+    hooks: true,
+    onDelete: 'cascade',
     through: users_pending_articles
 })
 pArticle.belongsToMany(User, {
+
+    hooks: true,
+    onDelete: 'cascade',
     through: users_pending_articles
 })
 
 // Pending_Articles_Images Relation
 pImage.belongsToMany(pArticle, {
+    hooks: true,
+    onDelete: 'cascade',
     through: p_articles_images
 })
 pArticle.belongsToMany(pImage, {
+    hooks: true,
+    onDelete: 'cascade',
     through: p_articles_images
 })
 
 // Articles_Sections Relation
 Article.belongsToMany(Section, {
+    hooks: true,
+    onDelete: 'cascade',
     through: articles_sections
 })
 Section.belongsToMany(Article, {
+    hooks: true,
+    onDelete: 'cascade',
     through: articles_sections
 })
 
 // Users_Articles Relation
 User.belongsToMany(Article, {
+    hooks: true,
+    onDelete: 'cascade',
     through: users_articles
 })
 Article.belongsToMany(User, {
+    hooks: true,
+    onDelete: 'cascade',
     through: users_articles
 })
 
 // Article_Images Relation
-Article.belongsToMany(Image, {
-    through: articles_images
+Article.hasMany(Image, {
+    hooks: true,
+    onDelete: 'cascade',
+    onUpdate: 'cascade'
 })
-Image.belongsToMany(Article, {
-    through: articles_images
+Image.belongsTo(Article, {
+    hooks: true,
+    onDelete: 'cascade',
 })
 
 
 // through is required!
 try {
     // sequelize.sync();
+    // sequelize.sync({
+    //     force: true
+    // });
 } catch (err) {
     console.log(err);
 }
@@ -129,5 +160,6 @@ module.exports = {
     User,
     Role,
     Section,
-    Article
+    Article,
+    Image
 }

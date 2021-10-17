@@ -7,7 +7,7 @@ module.exports = (sequelize, type) => {
             allowNull: false
         },
         content: {
-            type: type.STRING,
+            type: type.STRING(2000),
             allowNull: false
         },
     }, {

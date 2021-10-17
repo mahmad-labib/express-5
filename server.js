@@ -5,7 +5,15 @@ const {
 } = require('./conf/default')
 const path = require('path')
 global.app = express()
+
+
+
 var bodyParser = require('body-parser')
+app.use(bodyParser.urlencoded({ extended: false }))
+app.use(bodyParser.json())
+
+app.use(express.static('public'))
+
 require(path.join(__dirname, "./conf/response_code.js"))
 
 //import JWT globaly
@@ -15,10 +23,7 @@ require(path.join(__dirname, "/middleware/auth.js"))
 
 
 
-global.app.use(bodyParser.urlencoded({
-  extended: true
-}));
-global.app.use(bodyParser.json());
+;
 //middleware
 
 
