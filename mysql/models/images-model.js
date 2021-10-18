@@ -2,10 +2,10 @@ module.exports = (sequelize, type) => {
 
     return sequelize.define('images', {
         // Model attributes are defined here
-        path: {
+        name: {
             type: type.STRING,
             allowNull: false
-        },
+        }
     }, {
         modelName: 'images'
     });

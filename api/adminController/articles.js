@@ -18,7 +18,7 @@ const {
 
 var storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dest = `./public/images/${req.user.id}`
+    const dest = `./public/images/`
     fs.access(dest, function (error) {
       if (error) {
         console.log("Directory does not exist.");
@@ -42,14 +42,9 @@ global.app.post('/upload', global.grantAccess(admin), upload.array('image', 12),
   var {
     uploadName,
   } = req.body;
-  const imagesPath = []
-  req.files.forEach(element => {
-    imagesPath.push(element.path)
-  });
-
   if (uploadName == 'article') {
-    if (imagesPath) {
-      var article = await articleUpload(req, imagesPath);
+    if (req.files) {
+      var article = await articleUpload(req);
     }
     res.json(article)
   } else {
@@ -57,45 +52,44 @@ global.app.post('/upload', global.grantAccess(admin), upload.array('image', 12),
   }
 });
 
-async function articleUpload(req, imagesPath) {
+async function articleUpload(req) {
   var {
     content,
     title,
     section
   } = req.body;
-
   if (!content || !title || !section) {
-    throw createError(406)
+    throw createError(406, 'somthing went wrong')
   }
   try {
+    req.files.forEach(element => {
+      content = content.replace(element.originalname, element.filename);
+    });
     var article = await Article.create({
       title,
       content
     });
-    console.log(imagesPath)
     if (article) {
+      var attach_user = await article.setUsers(req.user.id);
       var attach_secions = await article.setSections(section);
-      const paths = [
-        'path',
-        'path',
-        'sdfsdf'
-      ]
-      paths.forEach(element=>{
-        var attach_images = await article.createImage({path: element})
-        if (!attach_secions) {
-          article.destroy();
-          throw createError(406, 'errror with section')
+      if (!attach_secions || !attach_user) {
+        throw createError(406, 'errror with section')
+      }
+      req.files.forEach(async element => {
+        var attach_image = await article.createImage({
+          name: element.filename
+        })
+        if (!attach_image) {
+          throw createError(406, 'errror with saving images')
         }
       })
-
-
-      return attach_images;
+      return article;
     } else {
-      deleteImages(imagesPath)
+      deleteImages(req.files)
       throw createError(406, 'error with saving article')
     }
   } catch (error) {
-    deleteImages(imagesPath)
+    deleteImages(req.files)
     Article.destroy({
       where: {
         id: article.id
@@ -107,19 +101,87 @@ async function articleUpload(req, imagesPath) {
 };
 
 
-
-
-async function deleteImages(path) {
-  if (Array.isArray(path)) {
-    path.forEach(element => {
-      fs.unlinkSync(element.path)
+async function deleteImages(files) {
+  if (Array.isArray(files)) {
+    files.forEach(async element => {
+      await fs.unlinkSync(element.path || element)
     });
     return true
   } else {
-    fs.unlinkSync(element)
+    fs.unlinkSync(element.path)
     return true;
   }
 }
+
+//Get Article
+global.app.get('/admin/article/:id', async (req, res) => {
+  var id = req.params.id;
+  var article = await Article.findOne({
+    where: {
+      id
+    }
+  })
+  var {
+    content,
+    title
+  } = article;
+  var images = await article.getImages()
+  var url = req.protocol + '://' + req.get('host') + '/images';
+  var newArticle = content;
+  images.forEach(element => {
+    content = newArticle.replace(element.name, url + '/' + element.name);
+    newArticle = content
+  });
+  res.json(new global.sendData('200', {
+    title,
+    newArticle
+  }))
+})
+
+// Edit Article
+global.app.post('/admin/article/:id', global.grantAccess(admin), upload.array('image', 12), async (req, res) => {
+  var id = req.params.id;
+  var {
+    content,
+    title
+  } = req.body;
+  var article = await Article.findOne({
+    where: {
+      id
+    }
+  })
+  var images = await article.getImages();
+  var keepImages = []
+  images.forEach(async element => {
+    var check = content.indexOf(element.name)
+    if (check > 0) {
+      keepImages.push(element.name)
+    }
+  });
+  req.files.forEach(element => {
+    var check = content.indexOf(element.originalname)
+    if (check) {
+      keepImages.push(element.filename)
+      content = content.replace(element.originalname, element.filename);
+    }
+  });
+  article.content = content;
+  article.title = title;
+  var newArticle = await article.save();
+  keepImages.forEach(async element => {
+    console.log(element)
+    var attach_image = await newArticle.createImage({
+      name: element
+    })
+  })
+  res.json(new global.sendData(200, newArticle))
+  if (!article) {
+    throw createError(404, 'article not found')
+  }
+
+})
+
+
 // global.app.get('/admin/uploads');
 
 // global.app.post('/admin/article', articleUpload);

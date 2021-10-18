@@ -148,7 +148,13 @@ Image.belongsTo(Article, {
 
 // through is required!
 try {
-    // sequelize.sync();
+    // sequelize.sync().then(function(){
+    //     Role.bulkCreate([
+    //         {name: 'admin'}, // part of records argument
+    //         {name: 'moderator'},
+    //         {name: 'junior'}
+    //     ]);
+    // });
     // sequelize.sync({
     //     force: true
     // });
