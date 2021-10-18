@@ -58,10 +58,10 @@ async function articleUpload(req) {
     title,
     section
   } = req.body;
-  if (!content || !title || !section) {
-    throw createError(406, 'somthing went wrong')
-  }
   try {
+    if (!content || !title || !section) {
+      throw createError(406, 'please add a section')
+    }
     req.files.forEach(element => {
       content = content.replace(element.originalname, element.filename);
     });
@@ -85,19 +85,19 @@ async function articleUpload(req) {
       })
       return article;
     } else {
-      deleteImages(req.files)
       throw createError(406, 'error with saving article')
     }
   } catch (error) {
     deleteImages(req.files)
-    Article.destroy({
-      where: {
-        id: article.id
-      }
-    });
+    if (article) {
+      Article.destroy({
+        where: {
+          id: article.id
+        }
+      });
+    }
     throw createError(404, error)
   }
-
 };
 
 
@@ -106,7 +106,6 @@ async function deleteImages(files) {
     files.forEach(async element => {
       await fs.unlinkSync(element.path || element)
     });
-    return true
   } else {
     fs.unlinkSync(element.path)
     return true;
@@ -168,13 +167,8 @@ global.app.post('/admin/article/:id', global.grantAccess(admin), upload.array('i
   article.content = content;
   article.title = title;
   var newArticle = await article.save();
-  keepImages.forEach(async element => {
-    console.log(element)
-    var attach_image = await newArticle.createImage({
-      name: element
-    })
-  })
-  res.json(new global.sendData(200, newArticle))
+  var replaceImages = await keepImages.map(name => { newArticle.setImages({ name: name }) })
+  res.json(new global.sendData(200, replaceImages))
   if (!article) {
     throw createError(404, 'article not found')
   }
