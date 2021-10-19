@@ -158,7 +158,7 @@ global.app.get('/admin/articles', global.grantAccess(admin), async (req, res) =>
     order: [
       ['createdAt', 'ASC'],
     ],
-    attributes: ['id', 'title', [sequelize.fn(url+'id' AS Url), 'mc'] ],
+    // attributes: ['id', 'title', [sequelize.fn(url+'id' AS Url), 'mc'] ],
     limit: 20,
     offset: req.body.page || 0
   })

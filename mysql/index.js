@@ -138,7 +138,6 @@ Article.belongsToMany(User, {
 Article.hasMany(Image, {
     hooks: true,
     onDelete: 'cascade',
-    onUpdate: 'cascade'
 })
 Image.belongsTo(Article, {
     hooks: true,
