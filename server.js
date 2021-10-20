@@ -43,11 +43,11 @@ app.use((error, req, res, next) => {
   res.json({
     status: error.status,
     message: error.message,
-    stack: error.stack
+    // stack: error.stack
   })
 })
 
-const port = conf.port
+const port = conf.port;
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)

@@ -21,11 +21,6 @@ loginRequired = function loginRequired(req, res, next) {
         const error = new Error('Something went wrong!');
         error.status = 404;
         next(error);
-        // res.json({
-        //     msg: 'you need to sign in',
-        //     code: '401'
-        // })
-        // return 
     }
 }
 
@@ -39,20 +34,6 @@ alreadylogin = function alreadylogin(req, res, next) {
         return next();
     }
 }
-
-
-// roleGate = async function roleGate(req, res, next, gateRole) {
-//     var userRoles = req.user.roles;
-//     if (roles) {
-//         var roleState = await checkRole(userRoles, gateRole);
-//         if (roleState) {
-//             next()
-//         } else {
-//             res.json(new global.Forbidden())
-//         }
-//     }
-//     res.json(new global.Forbidden())
-// }
 
 function checkRole(userRoles, gateRole) {
     var valid = userRoles.find(o => o.name === gateRole);
