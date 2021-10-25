@@ -86,11 +86,11 @@ global.app.post('/admin/article/:id', global.grantAccess(admin), upload.array('i
       var check = Entity.content.includes(image.name)
       if (!check) {
         deleteImages.push(image.id)
+        deleteImagesPath.push(dest + image.name)
       }
     })
     Entity.images.forEach(async image => {
       var check = Entity.content.includes(image.originalname)
-      console.log(check)
       if (check) {
         var savedImage = await Image.create({ name: image.filename })
         newImages.push(savedImage);
@@ -98,6 +98,8 @@ global.app.post('/admin/article/:id', global.grantAccess(admin), upload.array('i
         DeleteImages(image);
       }
     })
+    //Delete The Replaced Image
+    DeleteImages(deleteImagesPath);
     //Make New Article
     Entity.images.forEach(image => {
       Entity.content = Entity.content.replace(image.originalname, image.filename);

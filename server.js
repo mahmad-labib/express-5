@@ -1,12 +1,9 @@
 const express = require('express')
 global.createError = require('http-errors')
-const {
-  conf
-} = require('./conf/default')
+const { conf } = require('./conf/default')
 const path = require('path')
 global.app = express()
-
-
+var fs = require('fs');
 
 var bodyParser = require('body-parser')
 app.use(bodyParser.urlencoded({ extended: false }))
@@ -21,17 +18,14 @@ global.jwt = require('jsonwebtoken');
 global.jwt_secret = require('./conf/jwt')
 require(path.join(__dirname, "/middleware/auth.js"))
 
-
-
-;
 //middleware
-
-
 require(path.join(__dirname, "/api/user.js"));
 require(path.join(__dirname, "/api/adminController/users.js"));
 require(path.join(__dirname, "/api/adminController/roles.js"));
 require(path.join(__dirname, "/api/adminController/sections.js"));
 require(path.join(__dirname, "/api/adminController/articles.js"));
+require(path.join(__dirname, "/api/juniorController/articles.js"));
+require(path.join(__dirname, "/api/moderatorController/pending-articles.js"));
 require(path.join(__dirname, "/mysql"));
 
 app.use((req, res, next) => {
@@ -39,12 +33,14 @@ app.use((req, res, next) => {
 })
 
 app.use((error, req, res, next) => {
+
   res.status(error.status || 500)
   res.json({
     status: error.status,
     message: error.message,
     // stack: error.stack
   })
+
 })
 
 const port = conf.port;

@@ -3,22 +3,21 @@ require('sequelize-hierarchy')(Sequelize);
 const userModel = require('./models/user-model');
 const articleModel = require('./models/article-model');
 const imagesModel = require('./models/images-model');
-const pArticleModel = require('./models/pending-articles');
 const roleModel = require('./models/role-model');
 const sectionModel = require('./models/section-model');
-const pImagesModel = require('./models/pending-images');
-const {
-    conf
-} = require('../conf/default');
+const { conf } = require('../conf/default');
 
+// var cls = require('continuation-local-storage'),
+//     namespace = cls.createNamespace('my-very-own-namespace');
+// Sequelize.cls = namespace;
 
 // Option 1: Passing a connection URI
 const sequelize = new Sequelize(conf.database.DATABASE,
     conf.database.USERNAME,
     conf.database.PASSWORD, {
-        host: conf.database.HOST,
-        dialect: 'mysql'
-    });
+    host: conf.database.HOST,
+    dialect: 'mysql'
+});
 
 try {
     sequelize.authenticate();
@@ -32,8 +31,6 @@ const User = userModel(sequelize, Sequelize);
 const Role = roleModel(sequelize, Sequelize);
 const Image = imagesModel(sequelize, Sequelize);
 const Article = articleModel(sequelize, Sequelize);
-const pArticle = pArticleModel(sequelize, Sequelize);
-const pImage = pImagesModel(sequelize, Sequelize);
 const Section = sectionModel(sequelize, Sequelize);
 
 
@@ -49,14 +46,10 @@ const users_sections = sequelize.define('users_sections')
 //Users_Articles
 const users_articles = sequelize.define('users_articles')
 
-// Users_Pending_Articles
-const users_pending_articles = sequelize.define('users_pending_articles')
 
 // Articles_Sections
 const articles_sections = sequelize.define('articles_sections')
 
-// Pending_Articles_Images
-const p_articles_images = sequelize.define('p_articles_images')
 
 //  ------ Relations ------
 
@@ -84,31 +77,6 @@ Section.belongsToMany(User, {
     through: users_sections
 })
 
-// Users_Pending_Article Relation
-User.belongsToMany(pArticle, {
-
-    hooks: true,
-    onDelete: 'cascade',
-    through: users_pending_articles
-})
-pArticle.belongsToMany(User, {
-
-    hooks: true,
-    onDelete: 'cascade',
-    through: users_pending_articles
-})
-
-// Pending_Articles_Images Relation
-pImage.belongsToMany(pArticle, {
-    hooks: true,
-    onDelete: 'cascade',
-    through: p_articles_images
-})
-pArticle.belongsToMany(pImage, {
-    hooks: true,
-    onDelete: 'cascade',
-    through: p_articles_images
-})
 
 // Articles_Sections Relation
 Article.belongsToMany(Section, {
@@ -126,11 +94,13 @@ Section.belongsToMany(Article, {
 User.belongsToMany(Article, {
     hooks: true,
     onDelete: 'cascade',
+    onUpdate: 'cascade',
     through: users_articles
 })
 Article.belongsToMany(User, {
     hooks: true,
     onDelete: 'cascade',
+    onUpdate: 'cascade',
     through: users_articles
 })
 
@@ -147,16 +117,17 @@ Image.belongsTo(Article, {
 
 // through is required!
 try {
-    // sequelize.sync().then(function(){
+    // sequelize.sync({ force: true }).then(function () {
     //     Role.bulkCreate([
-    //         {name: 'admin'}, // part of records argument
-    //         {name: 'moderator'},
-    //         {name: 'junior'}
+    //         { name: 'admin' }, // part of records argument
+    //         { name: 'moderator' },
+    //         { name: 'junior' }
     //     ]);
-    // });
-    // sequelize.sync({
-    //     force: true
-    // });
+    //     Section.bulkCreate([
+    //         { name: 'sport' }
+    //     ]);
+    // })
+    // sequelize.sync();
 } catch (err) {
     console.log(err);
 }
@@ -166,5 +137,6 @@ module.exports = {
     Role,
     Section,
     Article,
-    Image
+    Image,
+    sequelize
 }

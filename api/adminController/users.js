@@ -1,8 +1,6 @@
 const { User, Role, Article, Section } = require('../../mysql');
 const { Op } = require("sequelize");
-const crypto = require('crypto');
 const { roles } = require('../../conf/default');
-const { title } = require('process');
 var admin = roles.admin
 
 global.app.get('/admin', global.grantAccess(admin), async function (req, res) {
@@ -81,7 +79,7 @@ global.app.get('/admin/user/:id', global.grantAccess(admin), async function (req
             },
             include: [{
                 model: Role,
-            },{
+            }, {
                 model: Section,
             }],
         })
@@ -103,7 +101,7 @@ global.app.post('/admin/user', global.grantAccess(admin), async function (req, r
                 id
             }
         })
-        if (!user) {
+        if (user) {
             res.josn(new global.regularError(404, 'user not found'))
         }
         var query = await User.update({

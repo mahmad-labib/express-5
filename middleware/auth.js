@@ -37,6 +37,7 @@ alreadylogin = function alreadylogin(req, res, next) {
 
 function checkRole(userRoles, gateRole) {
     var valid = userRoles.find(o => o.name === gateRole);
+    console.log(gateRole)
     return valid;
 }
 

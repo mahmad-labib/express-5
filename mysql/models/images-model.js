@@ -9,5 +9,5 @@ module.exports = (sequelize, type) => {
     }, {
         modelName: 'images'
     });
-    
-    }
+
+}

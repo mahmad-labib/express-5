@@ -4,10 +4,11 @@ module.exports = (sequelize, type) => {
         // Model attributes are defined here
         title: {
             type: type.STRING,
-            allowNull: false
+            allowNull: false,
+            unique: true
         },
         content: {
-            type: type.STRING(2000),
+            type: type.TEXT,
             allowNull: false
         },
         state: {
