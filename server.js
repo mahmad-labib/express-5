@@ -19,7 +19,7 @@ global.jwt_secret = require('./conf/jwt')
 require(path.join(__dirname, "/middleware/auth.js"))
 
 //middleware
-require(path.join(__dirname, "/api/user.js"));
+require(path.join(__dirname, "/api/userController/user.js"));
 require(path.join(__dirname, "/api/adminController/users.js"));
 require(path.join(__dirname, "/api/adminController/roles.js"));
 require(path.join(__dirname, "/api/adminController/sections.js"));
@@ -38,7 +38,7 @@ app.use((error, req, res, next) => {
   res.json({
     status: error.status,
     message: error.message,
-    // stack: error.stack
+    stack: error.stack
   })
 
 })

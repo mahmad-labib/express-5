@@ -1,4 +1,4 @@
-const { User, Role, Section } = require('../mysql');
+const { User, Role, Section } = require('../../mysql');
 const crypto = require('crypto');
 
 global.app.get('/user', global.loginRequired, async function (req, res) {
