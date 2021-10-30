@@ -50,6 +50,9 @@ const users_articles = sequelize.define('users_articles')
 // Articles_Sections
 const articles_sections = sequelize.define('articles_sections')
 
+// Favorites
+const favorites = sequelize.define('favorites')
+
 
 //  ------ Relations ------
 
@@ -77,6 +80,11 @@ Section.belongsToMany(User, {
     through: users_sections
 })
 
+// Users_Favorites Relation
+User.hasMany(favorites);
+favorites.belongsTo(User);
+Section.hasMany(favorites);
+favorites.belongsTo(Section);
 
 // Articles_Sections Relation
 Article.belongsToMany(Section, {
@@ -138,5 +146,6 @@ module.exports = {
     Section,
     Article,
     Image,
-    sequelize
+    sequelize,
+    favorites
 }

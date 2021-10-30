@@ -20,6 +20,7 @@ require(path.join(__dirname, "/middleware/auth.js"))
 
 //middleware
 require(path.join(__dirname, "/api/userController/user.js"));
+require(path.join(__dirname, "/api/userController/favorites.js"));
 require(path.join(__dirname, "/api/adminController/users.js"));
 require(path.join(__dirname, "/api/adminController/roles.js"));
 require(path.join(__dirname, "/api/adminController/sections.js"));

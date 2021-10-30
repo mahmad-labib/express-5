@@ -4,7 +4,6 @@ var DeleteImages = require('../../middleware/general')
 
 var fs = require('fs');
 var { roles, upload } = require('../../conf/default');
-const { RSA_NO_PADDING } = require('constants');
 var junior = roles.junior;
 const dest = `./public/images/`;
 
@@ -19,7 +18,7 @@ global.app.get('/junior/article/:id', async (req, res) => {
     images.forEach(element => {
       article.content = article.content.replace(element.name, url + '/' + element.name);
     });
-    res.json(new global.sendData('200', { article }))
+    res.json(new global.sendData(200, { article }))
   } else {
     throw createError(404);
   }
