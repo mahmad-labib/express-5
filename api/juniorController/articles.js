@@ -3,9 +3,8 @@ const { Op } = require("sequelize");
 var DeleteImages = require('../../middleware/general')
 
 var fs = require('fs');
-var { roles, upload } = require('../../conf/default');
+var { roles, upload, dest } = require('../../conf/default');
 var junior = roles.junior;
-const dest = `./public/images/`;
 
 
 // GET
@@ -27,7 +26,10 @@ global.app.get('/junior/article/:id', async (req, res) => {
 
 
 //POST Article
-global.app.post('/junior/upload', global.grantAccess(junior), upload.array('image', 12), async (req, res) => {
+global.app.post('/junior/upload', global.grantAccess(junior), upload.fields([
+  { name: 'image', maxCount: 12 },
+  { name: 'cover', maxCount: 1 },
+]), async (req, res) => {
   var { uploadName } = req.body;
   if (uploadName == 'article') {
     if (req.files) {
@@ -43,10 +45,10 @@ async function articleUpload(req) {
   var { content, title, section } = req.body;
   var state = 'pending'
   var section = await Section.findOne({ where: { id: section } })
-  if (!content || !title || !section) { throw createError(406, 'somthing went wrong') }
+  if (!content || !title || !section || !req.files.cover[0]) { throw createError(406, 'somthing went wrong') }
   req.files.forEach(element => { content = content.replace(element.originalname, element.filename) });
   try {
-    var article = await Article.create({ title, content, state })
+    var article = await Article.create({ title, content, state, cover: req.files.cover[0] })
     var setUser = await article.setUsers(req.user.id);
     var setSection = await article.setSections(section);
     req.files.forEach(async element => {
@@ -56,6 +58,7 @@ async function articleUpload(req) {
     return article;
   } catch (error) {
     DeleteImages(req.files)
+    DeleteImages(req.files.cover)
     throw createError(404, error)
   }
 }
@@ -81,17 +84,21 @@ global.app.delete('/junior/article/:id', global.grantAccess(junior), async (req,
     image.path = dest + image.name;
   })
   DeleteImages(images)
+  DeleteImages(dest + Model.cover)
   res.json(new global.sendSuccessMsg())
 })
 
 
 // Edit Article
-global.app.post('/junior/article/:id', global.grantAccess(junior), upload.array('image', 12), async (req, res) => {
+global.app.post('/junior/article/:id', global.grantAccess(junior), upload.fields([
+  { name: 'image', maxCount: 12 },
+  { name: 'cover', maxCount: 1 },
+]), async (req, res) => {
   var id = req.params.id;
   var { content, title, section } = req.body;
   var url = req.protocol + '://' + req.get('host') + '/images';
   try {
-    var Entity = { content, title, images: req.files, section }
+    var Entity = { content, title, images: req.files.image, section }
     var Model = await Article.findOne({ where: { id }, include: [{ model: Image, attributes: ['name', 'id'] }] })
     var deleteImages = []
     var deleteImagesPath = []
@@ -119,11 +126,15 @@ global.app.post('/junior/article/:id', global.grantAccess(junior), upload.array(
       Entity.content = Entity.content.replace(image.originalname, image.filename);
     });
     Entity.content = Entity.content.replace(url + '/', '')
+    var cover = req.files.cover;
+    if (cover) {
+      Model.cover = cover[0].filename;
+    }
     Model.content = Entity.content
     Model.title = Entity.title
     var article = await Model.save();
     //Delete Images
-    Image.destroy({ where: { id: [deleteImages] } })
+    Image.destroy({ where: { id: deleteImages } })
     //Add Article Images
     article.addImages(newImages);
     article.setSections(Entity.section)
@@ -133,7 +144,10 @@ global.app.post('/junior/article/:id', global.grantAccess(junior), upload.array(
       throw createError(404, 'article not found')
     }
   } catch (error) {
-    DeleteImages(req.files);
+    DeleteImages(req.files.image);
+    if (cover) {
+      DeleteImages(cover[0]);
+    }
     throw createError(404, 'somthing went wrong')
   }
 })

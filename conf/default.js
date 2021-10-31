@@ -41,4 +41,4 @@ var storage = multer.diskStorage({
 
 var upload = multer({ storage })
 
-module.exports = { conf, roles, upload }
+module.exports = { conf, roles, upload, dest}

@@ -1,7 +1,7 @@
-const { Article, Image, User, Section } = require('../../mysql');
+const { Article, Image, User, Section, sequelize } = require('../../mysql');
 const { Op } = require("sequelize");
 var fs = require('fs');
-var { roles, upload } = require('../../conf/default')
+var { roles, upload, dest } = require('../../conf/default')
 var admin = roles.admin;
 
 const path = require('path')
@@ -25,7 +25,10 @@ global.app.get('/admin/article/:id', async (req, res) => {
 })
 
 //POST Article
-global.app.post('/upload', global.grantAccess(admin), upload.array('image', 12), async (req, res) => {
+global.app.post('/upload', global.grantAccess(admin), upload.fields([
+  { name: 'image', maxCount: 12 },
+  { name: 'cover', maxCount: 1 },
+]), async (req, res) => {
   var { uploadName } = req.body;
   if (uploadName == 'article') {
     if (req.files) {
@@ -40,76 +43,94 @@ global.app.post('/upload', global.grantAccess(admin), upload.array('image', 12),
 // POST Article Function
 async function articleUpload(req) {
   var { content, title, section, state } = req.body;
-  var section = await Section.findOne({ where: { id: section } })
-  if (!content || !title || !section || !state) { throw createError(406, 'somthing went wrong') }
-  req.files.forEach(element => { content = content.replace(element.originalname, element.filename) });
-  var article = await Article.create({ title, content, state });
+  var sectionCheck = await Section.findOne({ where: { id: section } })
+  if (!content || !title || !sectionCheck || !state || !req.files.cover[0]) { throw createError(406, 'somthing went wrong') }
+  req.files.image.forEach(element => { content = content.replace(element.originalname, element.filename) });
+  var article = await Article.create({ title, content, state, cover: req.files.cover[0].filename });
   if (article) {
     await article.setUsers(req.user.id);
     await article.setSections(section);
-    req.files.forEach(async element => {
+    req.files.image.forEach(async element => {
       await article.createImage({ name: element.filename })
     })
     return article;
   } else {
-    DeleteImages(req.files)
+    DeleteImages(req.files.image)
+    DeleteImages(req.files.cover)
     throw createError(404)
   }
 }
 
 // Delete Local Images
 async function DeleteImages(files) {
-  if (Array.isArray(files)) {
-    files.forEach(async element => {
-      await fs.unlinkSync(element.path || element)
-    });
-    return true
-  } else {
-    fs.unlinkSync(element.path || element)
-    return true;
+  if (files) {
+    if (Array.isArray(files)) {
+      files.forEach(async element => {
+        await fs.unlinkSync(element.path || element)
+      });
+      return true
+    } else {
+      await fs.unlinkSync(files.path || files)
+      return true;
+    }
   }
+  return true;
 }
 
 
 
 // Edit Article
-global.app.post('/admin/article/:id', global.grantAccess(admin), upload.array('image', 12), async (req, res) => {
+global.app.post('/admin/article/:id', global.grantAccess(admin), upload.fields([
+  { name: 'image', maxCount: 12 },
+  { name: 'cover', maxCount: 1 },
+]), async (req, res) => {
   var id = req.params.id;
   var { content, title } = req.body;
   var url = req.protocol + '://' + req.get('host') + '/images';
   try {
-    var Entity = { content, title, images: req.files }
+    var Entity = { content, title, images: req.files.image }
     var Model = await Article.findOne({ where: { id }, include: [{ model: Image, attributes: ['name', 'id'] }] })
     var deleteImages = []
     var newImages = []
-    Model.images.forEach(image => {
-      var check = Entity.content.includes(image.name)
-      if (!check) {
-        deleteImages.push(image.id)
-        deleteImagesPath.push(dest + image.name)
-      }
-    })
-    Entity.images.forEach(async image => {
-      var check = Entity.content.includes(image.originalname)
-      if (check) {
-        var savedImage = await Image.create({ name: image.filename })
-        newImages.push(savedImage);
-      } else {
-        DeleteImages(image);
-      }
-    })
-    //Delete The Replaced Image
-    DeleteImages(deleteImagesPath);
-    //Make New Article
-    Entity.images.forEach(image => {
-      Entity.content = Entity.content.replace(image.originalname, image.filename);
-    });
+    var deleteImagesPath = []
+    if (Model.images) {
+      Model.images.forEach(image => {
+        var check = Entity.content.includes(image.name)
+        if (!check) {
+          deleteImages.push(image.id)
+          deleteImagesPath.push(dest + image.name)
+        }
+      })
+      //Delete The Replaced Image
+      DeleteImages(deleteImagesPath);
+    }
+    if (Entity.images) {
+      Entity.images.forEach(async image => {
+        var check = Entity.content.includes(image.originalname)
+        if (check) {
+          var savedImage = await Image.create({ name: image.filename })
+          newImages.push(savedImage);
+        } else {
+          DeleteImages(image);
+        }
+      })
+      Entity.images.forEach(image => {
+        Entity.content = Entity.content.replace(image.originalname, image.filename);
+      });
+    }
+
     Entity.content = Entity.content.replace(url + '/', '')
+    //----cover Image----
+    var cover = req.files.cover;
+    if (cover) {
+      Model.cover = cover[0].filename;
+    }
     Model.content = Entity.content
     Model.title = Entity.title
     var article = await Model.save();
     //Delete Images
-    Image.destroy({ where: { id: [deleteImages] } })
+    Image.destroy({ where: { id: deleteImages } })
+    console.log(deleteImages)
     //Add Article Images
     article.addImages(newImages);
     var sendArticle = await Article.findOne({ where: { id: article.id } })
@@ -118,8 +139,11 @@ global.app.post('/admin/article/:id', global.grantAccess(admin), upload.array('i
       throw createError(404, 'article not found')
     }
   } catch (error) {
-    DeleteImages(req.files);
-    throw createError(404, 'somthing went wrong')
+    DeleteImages(req.files.image);
+    if (cover) {
+      DeleteImages(cover[0]);
+    }
+    throw createError(404, error)
   }
 })
 
@@ -138,6 +162,7 @@ global.app.delete('/admin/article/:id', global.grantAccess(admin), async (req, r
       image.path = dest + image.name;
     })
     DeleteImages(images)
+    DeleteImages(dest + Model.cover)
   }
   res.json(new global.sendSuccessMsg());
 })
@@ -163,6 +188,7 @@ global.app.get('/admin/articles', global.grantAccess(admin), async (req, res) =>
 // Search 
 global.app.get('/admin/articles/search', global.grantAccess(admin), async (req, res) => {
   var { title, state, section, author, limit, page } = req.body;
+  var url = req.protocol + '://' + req.get('host') + '/images';
   var article = await Article.findAndCountAll({
     include: [{
       as: 'users',
@@ -195,5 +221,6 @@ global.app.get('/admin/articles/search', global.grantAccess(admin), async (req, 
     limit: limit,
     offset: page || 0
   })
+
   res.json(new global.sendData(200, article));
 })

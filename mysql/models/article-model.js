@@ -18,9 +18,13 @@ module.exports = (sequelize, type) => {
         comment: {
             type: type.STRING,
             allowNull: true
+        },
+        cover: {
+            type: type.TEXT,
+            allowNull: false
         }
     }, {
         modelName: 'articles'
     });
-    
-    }
+
+}
