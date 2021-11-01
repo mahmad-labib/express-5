@@ -1,9 +1,15 @@
 const express = require('express')
+const https = require("https")
 global.createError = require('http-errors')
 const { conf } = require('./conf/default')
 const path = require('path')
 global.app = express()
 var fs = require('fs');
+
+var privateKey = fs.readFileSync('server.key', 'utf8');
+var certificate = fs.readFileSync('server.cert', 'utf8');
+
+var credentials = { key: privateKey, cert: certificate };
 
 var bodyParser = require('body-parser')
 app.use(bodyParser.urlencoded({ extended: false }))
@@ -34,19 +40,20 @@ app.use((req, res, next) => {
   next(createError(404))
 })
 
-app.use((error, req, res, next) => {
+app.use((err, req, res, next) => {
 
-  res.status(error.status || 500)
+  res.status(err.status || 500)
+  if (err.message = "Validation error") {
+    err.message = "email already exist"
+  }
   res.json({
-    status: error.status,
-    message: error.message,
-    stack: error.stack
+    status: err.status,
+    message: err.message,
+    // stack: err.stack
   })
 
 })
 
 const port = conf.port;
 
-app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`)
-})
+https.createServer(credentials, app).listen(port);

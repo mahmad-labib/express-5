@@ -6,6 +6,7 @@ const imagesModel = require('./models/images-model');
 const roleModel = require('./models/role-model');
 const sectionModel = require('./models/section-model');
 const { conf } = require('../conf/default');
+const crypto = require('crypto');
 
 // var cls = require('continuation-local-storage'),
 //     namespace = cls.createNamespace('my-very-own-namespace');
@@ -125,7 +126,7 @@ Image.belongsTo(Article, {
 
 // through is required!
 try {
-    // sequelize.sync({ force: true }).then(function () {
+    // sequelize.sync({ force: true }).then(async function () {
     //     Role.bulkCreate([
     //         { name: 'admin' }, // part of records argument
     //         { name: 'moderator' },
@@ -134,8 +135,13 @@ try {
     //     Section.bulkCreate([
     //         { name: 'sport' }
     //     ]);
+    //     var hash = crypto.pbkdf2Sync('admin', 'salt', 100, 24, 'sha512').toString('hex');
+    //     var admin = await User.create(
+    //         { name: 'admin', password: hash, email: 'test@gmail.com' }
+    //     )
+    //     var adminRoles = await Role.findAll()
+    //     await admin.setRoles(adminRoles)
     // })
-    // sequelize.sync();
 } catch (err) {
     console.log(err);
 }

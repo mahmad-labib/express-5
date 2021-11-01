@@ -13,6 +13,12 @@ global.app.use(function (req, res, next) {
     }
 });
 
+global.asyncHandler = fn => (req, res, next) => {
+    return Promise
+        .resolve(fn(req, res, next))
+        .catch(next);
+};
+
 
 loginRequired = function loginRequired(req, res, next) {
     if (req.user) {

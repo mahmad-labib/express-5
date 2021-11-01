@@ -2,13 +2,7 @@ const { User, Role, Section } = require('../../mysql');
 const crypto = require('crypto');
 
 global.app.get('/user', global.loginRequired, async function (req, res) {
-    var user = await User.findOne({
-        where: {
-            id: req.user.id
-        }
-    })
-    res.json(req.user)
-    res.json(new global.sendData(200, user))
+    res.json(new global.sendData(200, req.user))
 })
 
 global.app.post('/user/login', async function (req, res) {

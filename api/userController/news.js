@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Article, Section, User,sequelize } = require("../../mysql");
+const { Article, Section, User, sequelize } = require("../../mysql");
 
 global.app.get('/news', async (req, res) => {
     var { limit, page } = req.body
