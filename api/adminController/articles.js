@@ -88,56 +88,59 @@ global.app.post('/admin/article/:id', global.grantAccess(admin), upload.fields([
   var { content, title } = req.body;
   var url = req.protocol + '://' + req.get('host') + '/images';
   try {
-    var Entity = { content, title, images: req.files.image }
-    var Model = await Article.findOne({ where: { id }, include: [{ model: Image, attributes: ['name', 'id'] }] })
-    var deleteImages = []
-    var newImages = []
-    var deleteImagesPath = []
-    if (Model.images) {
-      Model.images.forEach(image => {
-        var check = Entity.content.includes(image.name)
-        if (!check) {
-          deleteImages.push(image.id)
-          deleteImagesPath.push(dest + image.name)
-        }
-      })
-      //Delete The Replaced Image
-      DeleteImages(deleteImagesPath);
-    }
-    if (Entity.images) {
-      Entity.images.forEach(async image => {
-        var check = Entity.content.includes(image.originalname)
-        if (check) {
-          var savedImage = await Image.create({ name: image.filename })
-          newImages.push(savedImage);
-        } else {
-          DeleteImages(image);
-        }
-      })
-      Entity.images.forEach(image => {
-        Entity.content = Entity.content.replace(image.originalname, image.filename);
-      });
-    }
+    const result = await sequelize.transaction(async (t) => {
+      var Entity = { content, title, images: req.files.image }
+      var Model = await Article.findOne({ where: { id }, include: [{ model: Image, attributes: ['name', 'id'] }] })
+      var deleteImages = []
+      var newImages = []
+      var deleteImagesPath = []
+      if (Model.images) {
+        Model.images.forEach(image => {
+          var check = Entity.content.includes(image.name)
+          if (!check) {
+            deleteImages.push(image.id)
+            deleteImagesPath.push(dest + image.name)
+          }
+        })
+        //Delete The Replaced Image
+        DeleteImages(deleteImagesPath);
+      }
+      if (Entity.images) {
+        Entity.images.forEach(async image => {
+          var check = Entity.content.includes(image.originalname)
+          if (check) {
+            var savedImage = await Image.create({ name: image.filename }, { transaction: t })
+            newImages.push(savedImage);
+          } else {
+            DeleteImages(image);
+          }
+        })
+        Entity.images.forEach(image => {
+          Entity.content = Entity.content.replace(image.originalname, image.filename);
+        });
+      }
 
-    Entity.content = Entity.content.replace(url + '/', '')
-    //----cover Image----
-    var cover = req.files.cover;
-    if (cover) {
-      Model.cover = cover[0].filename;
-    }
-    Model.content = Entity.content
-    Model.title = Entity.title
-    var article = await Model.save();
-    //Delete Images
-    Image.destroy({ where: { id: deleteImages } })
-    console.log(deleteImages)
-    //Add Article Images
-    article.addImages(newImages);
-    var sendArticle = await Article.findOne({ where: { id: article.id } })
-    res.json(new global.sendData(200, sendArticle))
-    if (!article) {
-      throw createError(404, 'article not found')
-    }
+      Entity.content = Entity.content.replace(url + '/', '')
+      //----cover Image----
+      var cover = req.files.cover;
+      if (cover) {
+        Model.cover = cover[0].filename;
+      }
+      Model.content = Entity.content
+      Model.title = Entity.title
+      var article = await Model.save({ transaction: t });
+      //Delete Images
+      Image.destroy({ where: { id: deleteImages } }, { transaction: t })
+      console.log(deleteImages)
+      //Add Article Images
+      article.addImages(newImages, { transaction: t });
+      var sendArticle = await Article.findOne({ where: { id: article.id } })
+      res.json(new global.sendData(200, sendArticle))
+      if (!article) {
+        throw createError(404, 'article not found')
+      }
+    })
+
   } catch (error) {
     DeleteImages(req.files.image);
     if (cover) {

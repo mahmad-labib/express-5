@@ -1,10 +1,27 @@
 const { Article, Image, User, Section, sequelize } = require('../../mysql');
 const { Op } = require("sequelize");
-var DeleteImages = require('../../middleware/general')
+
 
 var fs = require('fs');
 var { roles, upload, dest } = require('../../conf/default');
 var junior = roles.junior;
+
+// Delete Local Images
+async function DeleteImages(files) {
+  console.log(files);
+  if (files) {
+    if (Array.isArray(files)) {
+      files.forEach(async element => {
+        await fs.unlinkSync(element.path || element)
+      });
+      return true
+    } else {
+      await fs.unlinkSync(files.path || files)
+      return true;
+    }
+  }
+  return true;
+}
 
 
 // GET
@@ -37,6 +54,8 @@ global.app.post('/junior/upload', global.grantAccess(junior), upload.fields([
       res.json(new global.sendData(200, article))
     }
   } else {
+    DeleteImages(req.files.image)
+    DeleteImages(req.files.cover)
     throw createError(404)
   }
 });
@@ -44,20 +63,29 @@ global.app.post('/junior/upload', global.grantAccess(junior), upload.fields([
 async function articleUpload(req) {
   var { content, title, section } = req.body;
   var state = 'pending'
-  var section = await Section.findOne({ where: { id: section } })
-  if (!content || !title || !section || !req.files.cover[0]) { throw createError(406, 'somthing went wrong') }
-  req.files.forEach(element => { content = content.replace(element.originalname, element.filename) });
   try {
-    var article = await Article.create({ title, content, state, cover: req.files.cover[0] })
-    var setUser = await article.setUsers(req.user.id);
-    var setSection = await article.setSections(section);
-    req.files.forEach(async element => {
-      var image = await article.createImage({ name: element.filename })
-      console.log(image.id)
+    var section = await Section.findAll({
+      where: { id: section },
+      include: [{
+        model: User,
+        where: {
+          id: req.user.id
+        }
+      }]
     })
-    return article;
+    if (!content || !title || !section || !req.files.cover[0]) { throw createError(406, 'somthing went wrong') }
+    if (req.files.image) req.files.image.forEach(element => { content = content.replace(element.originalname, element.filename) });
+    const result = await sequelize.transaction(async (t) => {
+      var article = await Article.create({ title, content, state, cover: req.files.cover[0].filename }, { transaction: t })
+      var setUser = await article.setUsers(req.user.id, { transaction: t });
+      var setSections = await article.setSections(section, { transaction: t });
+      await Promise.all(req.files.image.map(async element => {
+        var image = await article.createImage({ name: element.filename }, { transaction: t })
+      }))
+    })
+    return result;
   } catch (error) {
-    DeleteImages(req.files)
+    DeleteImages(req.files.image)
     DeleteImages(req.files.cover)
     throw createError(404, error)
   }
@@ -99,50 +127,52 @@ global.app.post('/junior/article/:id', global.grantAccess(junior), upload.fields
   var url = req.protocol + '://' + req.get('host') + '/images';
   try {
     var Entity = { content, title, images: req.files.image, section }
-    var Model = await Article.findOne({ where: { id }, include: [{ model: Image, attributes: ['name', 'id'] }] })
-    var deleteImages = []
-    var deleteImagesPath = []
-    var newImages = []
-    Model.images.forEach(image => {
-      var check = Entity.content.includes(image.name)
-      if (!check) {
-        deleteImages.push(image.id)
-        deleteImagesPath.push(dest + image.name)
+    const result = await sequelize.transaction(async (t) => {
+      var Model = await Article.findOne({ where: { id }, include: [{ model: Image, attributes: ['name', 'id'] }] })
+      var deleteImages = []
+      var deleteImagesPath = []
+      var newImages = []
+      Model.images.forEach(image => {
+        var check = Entity.content.includes(image.name)
+        if (!check) {
+          deleteImages.push(image.id)
+          deleteImagesPath.push(dest + image.name)
+        }
+      })
+      Entity.images.forEach(async image => {
+        var check = Entity.content.includes(image.originalname)
+        if (check) {
+          var savedImage = await Image.create({ name: image.filename }, { transaction: t })
+          newImages.push(savedImage);
+        } else {
+          DeleteImages(image);
+        }
+      })
+      //Delete The Replaced Image
+      DeleteImages(deleteImagesPath);
+      //Make New Article
+      Entity.images.forEach(image => {
+        Entity.content = Entity.content.replace(image.originalname, image.filename);
+      });
+      Entity.content = Entity.content.replace(url + '/', '')
+      var cover = req.files.cover;
+      if (cover) {
+        Model.cover = cover[0].filename;
+      }
+      Model.content = Entity.content
+      Model.title = Entity.title
+      var article = await Model.save({ transaction: t });
+      //Delete Images
+      Image.destroy({ where: { id: deleteImages } }, { transaction: t })
+      //Add Article Images
+      article.addImages(newImages, { transaction: t });
+      article.setSections(Entity.section, { transaction: t })
+      var sendArticle = await Article.findOne({ where: { id: article.id } })
+      res.json(new global.sendData(200, sendArticle))
+      if (!article) {
+        throw createError(404, 'article not found')
       }
     })
-    Entity.images.forEach(async image => {
-      var check = Entity.content.includes(image.originalname)
-      if (check) {
-        var savedImage = await Image.create({ name: image.filename })
-        newImages.push(savedImage);
-      } else {
-        DeleteImages(image);
-      }
-    })
-    //Delete The Replaced Image
-    DeleteImages(deleteImagesPath);
-    //Make New Article
-    Entity.images.forEach(image => {
-      Entity.content = Entity.content.replace(image.originalname, image.filename);
-    });
-    Entity.content = Entity.content.replace(url + '/', '')
-    var cover = req.files.cover;
-    if (cover) {
-      Model.cover = cover[0].filename;
-    }
-    Model.content = Entity.content
-    Model.title = Entity.title
-    var article = await Model.save();
-    //Delete Images
-    Image.destroy({ where: { id: deleteImages } })
-    //Add Article Images
-    article.addImages(newImages);
-    article.setSections(Entity.section)
-    var sendArticle = await Article.findOne({ where: { id: article.id } })
-    res.json(new global.sendData(200, sendArticle))
-    if (!article) {
-      throw createError(404, 'article not found')
-    }
   } catch (error) {
     DeleteImages(req.files.image);
     if (cover) {

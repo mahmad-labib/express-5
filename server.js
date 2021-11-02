@@ -43,9 +43,6 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
 
   res.status(err.status || 500)
-  if (err.message = "Validation error") {
-    err.message = "email already exist"
-  }
   res.json({
     status: err.status,
     message: err.message,

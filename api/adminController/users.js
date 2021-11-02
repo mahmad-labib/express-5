@@ -91,23 +91,16 @@ global.app.get('/admin/user/:id', global.grantAccess(admin), async function (req
 
 global.app.post('/admin/user', global.grantAccess(admin), async function (req, res) {
     try {
-        var {
-            id,
-            name,
-            email
-        } = req.body;
+        var { id, name, email } = req.body;
         var user = await User.findOne({
             where: {
                 id
             }
         })
-        if (user) {
+        if (!user) {
             res.josn(new global.regularError(404, 'user not found'))
         }
-        var query = await User.update({
-            name,
-            email
-        }, {
+        var query = await User.update({ name, email }, {
             where: {
                 id
             }
