@@ -3,7 +3,7 @@ const { Op } = require("sequelize");
 
 
 var fs = require('fs');
-var { roles, upload, dest } = require('../../conf/default');
+var { roles, upload, dest, imagesDest } = require('../../conf/default');
 var junior = roles.junior;
 
 // Delete Local Images
@@ -25,7 +25,7 @@ async function DeleteImages(files) {
 
 
 // GET
-global.app.get('/junior/article/:id', async (req, res) => {
+global.app.get('/junior/article/:id', global.grantAccess(junior), async (req, res) => {
   var id = req.params.id;
   var article = await Article.findOne({ where: { id } })
   if (article) {
@@ -34,6 +34,7 @@ global.app.get('/junior/article/:id', async (req, res) => {
     images.forEach(element => {
       article.content = article.content.replace(element.name, url + '/' + element.name);
     });
+    article.cover = imagesDest + article.cover;
     res.json(new global.sendData(200, { article }))
   } else {
     throw createError(404);
@@ -182,7 +183,7 @@ global.app.post('/junior/article/:id', global.grantAccess(junior), upload.fields
   }
 })
 
-global.app.get('/junior/articles/search', grantAccess(junior), async (req, res) => {
+global.app.post('/junior/articles/search', grantAccess(junior), async (req, res) => {
   var { title, state, section, limit, page } = req.body;
   console.log(req.body)
   var articles = await Article.findAndCountAll({

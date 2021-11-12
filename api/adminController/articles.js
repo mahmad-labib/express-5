@@ -1,7 +1,7 @@
 const { Article, Image, User, Section, sequelize } = require('../../mysql');
 const { Op } = require("sequelize");
 var fs = require('fs');
-var { roles, upload, dest } = require('../../conf/default')
+var { roles, upload, dest, imagesDest } = require('../../conf/default')
 var admin = roles.admin;
 
 const path = require('path')
@@ -9,7 +9,7 @@ const { query } = require('express');
 
 
 //Get Article
-global.app.get('/admin/article/:id', async (req, res) => {
+global.app.get('/admin/article/:id', global.grantAccess(admin), async (req, res) => {
   var id = req.params.id;
   var article = await Article.findOne({ where: { id } })
   if (article) {
@@ -18,6 +18,7 @@ global.app.get('/admin/article/:id', async (req, res) => {
     images.forEach(element => {
       article.content = article.content.replace(element.name, url + '/' + element.name);
     });
+    article.cover = imageDest + article.cover;
     res.json(new global.sendData('200', { article }))
   } else {
     throw createError(404);
@@ -36,6 +37,8 @@ global.app.post('/upload', global.grantAccess(admin), upload.fields([
       res.json(new global.sendData(200, article))
     }
   } else {
+    DeleteImages(req.files.image)
+    DeleteImages(req.files.cover)
     throw createError(404)
   }
 });
@@ -44,20 +47,24 @@ global.app.post('/upload', global.grantAccess(admin), upload.fields([
 async function articleUpload(req) {
   var { content, title, section, state } = req.body;
   var sectionCheck = await Section.findOne({ where: { id: section } })
-  if (!content || !title || !sectionCheck || !state || !req.files.cover[0]) { throw createError(406, 'somthing went wrong') }
-  req.files.image.forEach(element => { content = content.replace(element.originalname, element.filename) });
-  var article = await Article.create({ title, content, state, cover: req.files.cover[0].filename });
-  if (article) {
+  try {
+    if (!content || !title || !sectionCheck || !state || !req.files.cover[0]) {
+      throw createError(406, 'somthing went wrong')
+    }
+    req.files.image.forEach(element => { content = content.replace(element.originalname, element.filename) });
+    var article = await Article.create({ title, content, state, cover: req.files.cover[0].filename });
+
     await article.setUsers(req.user.id);
     await article.setSections(section);
     req.files.image.forEach(async element => {
       await article.createImage({ name: element.filename })
     })
     return article;
-  } else {
+
+  } catch (error) {
     DeleteImages(req.files.image)
     DeleteImages(req.files.cover)
-    throw createError(404)
+    throw createError(405)
   }
 }
 
@@ -172,7 +179,7 @@ global.app.delete('/admin/article/:id', global.grantAccess(admin), async (req, r
 
 
 //GET ALL
-global.app.get('/admin/articles', global.grantAccess(admin), async (req, res) => {
+global.app.post('/admin/articles', global.grantAccess(admin), async (req, res) => {
   var { limit, page, order } = req.body;
   var articles = await Article.findAndCountAll({
     where: {
@@ -189,7 +196,7 @@ global.app.get('/admin/articles', global.grantAccess(admin), async (req, res) =>
 })
 
 // Search 
-global.app.get('/admin/articles/search', global.grantAccess(admin), async (req, res) => {
+global.app.post('/admin/articles/search', global.grantAccess(admin), async (req, res) => {
   var { title, state, section, author, limit, page } = req.body;
   var url = req.protocol + '://' + req.get('host') + '/images';
   var article = await Article.findAndCountAll({

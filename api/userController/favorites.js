@@ -1,15 +1,13 @@
 const { Op } = require("sequelize");
 const { Section, User, Favorite, Article } = require("../../mysql");
 
-global.app.get('/favorites/sections', async (req, res) => {
-    var { name, limit, page } = req.body;
+global.app.post('/favorites/sections', async (req, res) => {
+    var { name } = req.body;
     var sections = await Section.findAll({
         hierarchy: true,
         name: {
             [Op.substring]: name
         },
-        limit: limit || 5,
-        offset: page || 0,
     });
     res.json(new global.sendData(200, sections));
 })
@@ -26,7 +24,7 @@ global.app.get('/favorites/authors', async (req, res) => {
     res.json(new global.sendData(200, user));
 })
 
-global.app.post('/favorites/sections', async (req, res) => {
+global.app.post('/favorites/addsections', async (req, res) => {
     var { sections } = req.body;
     var user = await User.findOne({ where: { id: req.user.id } })
     await Favorite.destroy({ where: { userId: user.id } })
@@ -49,7 +47,14 @@ global.app.get('/favorites', async (req, res) => {
     res.json(new global.sendData(200, favorites))
 })
 
-global.app.get('/favorites/news', async (req, res) => {
+global.app.get('/favorites/sections', async (req, res) => {
+    var sections = await Section.findAll({
+        hierarchy: true,
+    })
+    res.json(new global.sendData(200, sections))
+})
+
+global.app.post('/favorites/news', async (req, res) => {
     var { page, limit } = req.body;
     var user = await User.findOne({ where: { id: req.user.id } })
     var favorite_sections = await user.getFavorites({
@@ -63,7 +68,7 @@ global.app.get('/favorites/news', async (req, res) => {
         const articles = await section.section.getArticles({
             attributes: ['id', 'title', 'cover'],
             limit,
-            offset: page
+            offset: page,
         })
         news.push({
             section: section.section,

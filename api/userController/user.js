@@ -34,7 +34,8 @@ global.app.post('/user/login', async function (req, res) {
             email, id: user.id, roles: user.roles, sections: user.sections
         }, global.jwt_secret);
         res.json({
-            api_token
+            api_token,
+            isAdmin: user.roles.length === 0 ? false : true
         });
     }
 })

@@ -8,8 +8,10 @@ const conf = {
         USERNAME: 'adam',
         PASSWORD: '01030',
         HOST: 'localhost'
-    }
+    },
 }
+
+
 
 const roles = {
     admin: 'admin',
@@ -17,6 +19,9 @@ const roles = {
     author: 'author',
     junior: 'junior'
 }
+
+//images upload folder
+const imagesDest = '/images'
 
 //Multer Settings For Images
 var multer = require('multer');
@@ -35,10 +40,10 @@ var storage = multer.diskStorage({
         });
     },
     filename: function (req, file, cb) {
-        cb(null, Date.now() + file.originalname);
+        cb(null, Date.now() + file.originalname.replace(/\s+/g, ''));
     }
 });
 
 var upload = multer({ storage })
 
-module.exports = { conf, roles, upload, dest}
+module.exports = { conf, roles, upload, dest, imagesDest }

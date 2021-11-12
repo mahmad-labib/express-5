@@ -5,6 +5,8 @@ const { conf } = require('./conf/default')
 const path = require('path')
 global.app = express()
 var fs = require('fs');
+var cors = require('cors')
+app.use(cors())
 
 var privateKey = fs.readFileSync('server.key', 'utf8');
 var certificate = fs.readFileSync('server.cert', 'utf8');
@@ -46,7 +48,7 @@ app.use((err, req, res, next) => {
   res.json({
     status: err.status,
     message: err.message,
-    // stack: err.stack
+    stack: err.stack
   })
 
 })

@@ -1,13 +1,12 @@
 const { Article, User, Section, Image, sequelize } = require("../../mysql");
 var DeleteImages = require('../../middleware/general')
-var { roles, upload } = require('../../conf/default');
+var { roles, upload, dest, imagesDest } = require('../../conf/default');
 const { Op } = require("sequelize");
 var { roles } = require('../../conf/default');
 const createHttpError = require("http-errors");
 var moderator = roles.moderator;
-const dest = `./public/images/`;
 
-global.app.get('/moderator/pending_articles/search', global.grantAccess(moderator), async (req, res) => {
+global.app.post('/moderator/pending_articles/search', global.grantAccess(moderator), async (req, res) => {
     var { title, section, author, page, limit, state } = req.body;
     var article = await Article.findAndCountAll({
         include: [{
@@ -57,6 +56,7 @@ global.app.get('/moderator/pending_article/:id', global.grantAccess(moderator), 
         images.forEach(element => {
             article.content = article.content.replace(element.name, url + '/' + element.name);
         });
+        article.cover = imagesDest + article.cover;
         res.json(new global.sendData('200', { article }))
     } else {
         throw createError(404);

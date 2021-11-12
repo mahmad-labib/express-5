@@ -18,7 +18,7 @@ global.app.get('/admin', global.grantAccess(admin), async function (req, res) {
     }
 })
 
-global.app.get('/admin/users', global.grantAccess(admin), async function (req, res) {
+global.app.post('/admin/users', global.grantAccess(admin), async function (req, res) {
     try {
         var user = await User.findAndCountAll({
             order: [
@@ -33,7 +33,7 @@ global.app.get('/admin/users', global.grantAccess(admin), async function (req, r
     }
 })
 
-global.app.get('/admin/users/search', global.grantAccess(admin), async function (req, res) {
+global.app.post('/admin/users/search', global.grantAccess(admin), async function (req, res) {
     try {
         var { limit, page, name, email, role } = req.body
         var user = await User.findAll({
