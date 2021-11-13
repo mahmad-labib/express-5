@@ -28,7 +28,7 @@ global.app.post('/user/login', async function (req, res) {
         ],
     });
     if (user === null) {
-        return res.json('not found');
+        return res.json(new global.createError(404, "email and pass dont match"));
     } else {
         var api_token = await global.jwt.sign({
             email, id: user.id, roles: user.roles, sections: user.sections

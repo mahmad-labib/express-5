@@ -74,7 +74,7 @@ async function articleUpload(req) {
         }
       }]
     })
-    if (!content || !title || !section || !req.files.cover[0]) { throw createError(406, 'somthing went wrong') }
+    if (!content || !title || section.length === 0 || !req.files.cover[0]) { throw createError(406, 'somthing went wrong') }
     if (req.files.image) req.files.image.forEach(element => { content = content.replace(element.originalname, element.filename) });
     const result = await sequelize.transaction(async (t) => {
       var article = await Article.create({ title, content, state, cover: req.files.cover[0].filename }, { transaction: t })
