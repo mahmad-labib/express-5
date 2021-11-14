@@ -19,13 +19,14 @@ global.app.get('/admin', global.grantAccess(admin), async function (req, res) {
 })
 
 global.app.post('/admin/users', global.grantAccess(admin), async function (req, res) {
+    var { limit, page } = req.body;
     try {
         var user = await User.findAndCountAll({
             order: [
                 ['name', 'ASC'],
             ],
-            limit: 5,
-            offset: req.body.page
+            limit: limit,
+            offset: page * limit
         })
         res.json(new global.sendData('202', user))
     } catch (error) {
@@ -58,8 +59,8 @@ global.app.post('/admin/users/search', global.grantAccess(admin), async function
                     }
                 }
             }],
-            limit: limit || 5,
-            offset: page || 0,
+            limit: limit ,
+            offset: page * limit,
         })
         res.json(new global.sendData('202', user))
     } catch (error) {
