@@ -19,15 +19,21 @@ global.app.get('/admin', global.grantAccess(admin), async function (req, res) {
 })
 
 global.app.post('/admin/users', global.grantAccess(admin), async function (req, res) {
-    var { limit, page } = req.body;
     try {
         var user = await User.findAndCountAll({
             order: [
                 ['name', 'ASC'],
             ],
-            limit: limit,
-            offset: page * limit
+            include: [{
+                as: "roles",
+                model: Role,
+                attributes: ['name'],
+                
+            }],
         })
+        // await Promise.all(user.roles.map(async (element) => {
+        //     element.cover = await imagesDest + '/' + element.cover
+        // }))
         res.json(new global.sendData('202', user))
     } catch (error) {
         res.json(new global.regularError())
@@ -59,7 +65,7 @@ global.app.post('/admin/users/search', global.grantAccess(admin), async function
                     }
                 }
             }],
-            limit: limit ,
+            limit: limit,
             offset: page * limit,
         })
         res.json(new global.sendData('202', user))
