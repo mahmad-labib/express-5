@@ -20,7 +20,8 @@ global.app.get('/admin', global.grantAccess(admin), async function (req, res) {
 
 global.app.post('/admin/users', global.grantAccess(admin), async function (req, res) {
     try {
-        var user = await User.findAndCountAll({
+        var { limit, page } = req.body
+        var users = await User.findAndCountAll({
             order: [
                 ['name', 'ASC'],
             ],
@@ -28,13 +29,13 @@ global.app.post('/admin/users', global.grantAccess(admin), async function (req, 
                 as: "roles",
                 model: Role,
                 attributes: ['name'],
-                
+
             }],
+            limit: limit,
+            offset: page * limit,
         })
-        // await Promise.all(user.roles.map(async (element) => {
-        //     element.cover = await imagesDest + '/' + element.cover
-        // }))
-        res.json(new global.sendData('202', user))
+        users.count = Math.ceil(users.count / limit);
+        res.json(new global.sendData('202', users))
     } catch (error) {
         res.json(new global.regularError())
     }
@@ -43,7 +44,8 @@ global.app.post('/admin/users', global.grantAccess(admin), async function (req, 
 global.app.post('/admin/users/search', global.grantAccess(admin), async function (req, res) {
     try {
         var { limit, page, name, email, role } = req.body
-        var user = await User.findAll({
+        console.log(limit, page, name, email, role)
+        var users = await User.findAndCountAll({
             where: {
                 name: {
                     [Op.substring]: name || ''
@@ -68,7 +70,8 @@ global.app.post('/admin/users/search', global.grantAccess(admin), async function
             limit: limit,
             offset: page * limit,
         })
-        res.json(new global.sendData('202', user))
+        users.count = Math.ceil(users.count / limit);
+        res.json(new global.sendData('202', users))
     } catch (error) {
         res.json(new global.regularError())
     }
@@ -98,7 +101,8 @@ global.app.get('/admin/user/:id', global.grantAccess(admin), async function (req
 
 global.app.post('/admin/user', global.grantAccess(admin), async function (req, res) {
     try {
-        var { id, name, email } = req.body;
+        var { id, name, email, roles, sections } = req.body;
+        console.log('this is my ids', roles, sections)
         var user = await User.findOne({
             where: {
                 id
@@ -112,9 +116,11 @@ global.app.post('/admin/user', global.grantAccess(admin), async function (req, r
                 id
             }
         })
+        await user.setRoles(roles)
+        await user.setSections(sections)
         res.json(new global.sendSuccessMsg(200, query))
     } catch (error) {
-        res.json(new global.regularError())
+        throw createError(404, error)
     }
 })
 
@@ -128,6 +134,6 @@ global.app.delete('/admin/user/:id', global.grantAccess(admin), async function (
         })
         res.json(new global.sendSuccessMsg(200, query))
     } catch (error) {
-        res.json(new global.regularError())
+        throw createError(404, error)
     }
 })
