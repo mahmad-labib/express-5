@@ -43,6 +43,32 @@ global.app.get('/admin/section/:id', global.grantAccess(admin), async (req, res)
     res.json(new global.sendData(200, query));
 })
 
+global.app.post('/admin/section/edit', global.grantAccess(admin), async (req, res) => {
+    var { id, name, newParentId } = req.body;
+    if (!id && !name) throw createError(404);
+    var section = await Section.findOne({
+        where: { id },
+        include: [{
+            model: Section,
+            as: 'ancestors'
+        }, {
+            model: Section,
+            as: 'descendents',
+            hierarchy: true
+        }],
+    });
+    if (!section) throw createError(404);
+    if (newParentId) {
+        section.parentId = newParentId;
+    }
+    section.name = name;
+    var newSection = await section.save();
+    if (newSection) {
+        res.json(new global.sendSuccessMsg(200))
+    }
+    throw createError(404);
+})
+
 
 global.app.delete('/admin/section/:id', global.grantAccess(admin), async (req, res) => {
     var id = req.params.id;
